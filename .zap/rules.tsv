@@ -1,0 +1,24 @@
+# ZAP Scanning Rules
+# Format: <rule_id>	<threshold>	<action>
+
+# Ignorer certains avertissements de bas niveau
+10202	OFF	IGNORE	# Absence of Anti-CSRF Tokens (peut être géré différemment)
+10110	OFF	IGNORE	# Information Disclosure - Debug Error Messages
+
+# Règles critiques - FAIL le scan
+40018	ON	FAIL	# SQL Injection
+40012	ON	FAIL	# Cross Site Scripting (Reflected)
+40014	ON	FAIL	# Cross Site Scripting (Persistent)
+40016	ON	FAIL	# Cross Site Scripting (DOM Based)
+90019	ON	FAIL	# Server Side Code Injection
+90020	ON	FAIL	# Remote OS Command Injection
+
+# Règles de haute sévérité - WARN
+10095	ON	WARN	# Backup File Disclosure
+10098	ON	WARN	# Cross-Domain Misconfiguration
+10105	ON	WARN	# Weak Authentication Method
+
+# Règles de sévérité moyenne - INFO
+10017	ON	INFO	# Cross-Domain JavaScript Source File Inclusion
+10027	ON	INFO	# Information Disclosure - Suspicious Comments
+
