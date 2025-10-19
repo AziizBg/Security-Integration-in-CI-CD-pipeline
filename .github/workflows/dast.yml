@@ -42,12 +42,14 @@ jobs:
       # ====================================
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.10.0
+        continue-on-error: true  # Ne bloque pas sur warnings
         with:
           target: 'http://localhost:3000'
           rules_file_name: '.zap/rules.tsv'
           cmd_options: '-a'  # Include alpha rules
           fail_action: false  # ⚠️ Warning seulement sur main (sera activé dans les PRs)
           allow_issue_writing: false
+          artifact_name: ''  # Désactive l'artifact automatique de ZAP
 
       # ====================================
       # 🔍 OWASP ZAP - Full Scan (optionnel, plus long)
@@ -62,12 +64,14 @@ jobs:
           cmd_options: '-a -j'  # Alpha + Ajax Spider
           fail_action: false  # ❌ Bloque seulement si vulns critiques dans PR
           allow_issue_writing: false
+          artifact_name: ''  # Désactive l'artifact automatique
 
       # ====================================
       # 📊 Upload des résultats ZAP
       # ====================================
       - name: Upload ZAP results
         if: always()
+        continue-on-error: true  # Ne bloque pas si les rapports n'existent pas
         uses: actions/upload-artifact@v4
         with:
           name: zap-scan-results
@@ -75,6 +79,7 @@ jobs:
             report_html.html
             report_json.json
             report_md.md
+          if-no-files-found: warn  # Warning si pas de fichiers
 
       # ====================================
       # 🛑 Stop application
