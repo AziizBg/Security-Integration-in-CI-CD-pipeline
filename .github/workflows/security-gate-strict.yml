@@ -1,0 +1,102 @@
+name: Security Gate - Vulnerability Detection
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  vulnerability-check:
+    name: Check for Vulnerable Code Patterns
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Scan for SQL Injection patterns
+        run: |
+          echo "🔍 Scanning for SQL Injection vulnerabilities..."
+          if grep -r "SELECT.*FROM.*\${" src/ 2>/dev/null; then
+            echo "❌ SQL Injection pattern detected in code!"
+            echo "VULN_SQL=1" >> $GITHUB_ENV
+          else
+            echo "✅ No SQL Injection patterns found"
+            echo "VULN_SQL=0" >> $GITHUB_ENV
+          fi
+
+      - name: Scan for XSS vulnerabilities
+        run: |
+          echo "🔍 Scanning for XSS vulnerabilities..."
+          if grep -r "res\.send.*\${" src/ 2>/dev/null; then
+            echo "❌ XSS vulnerability pattern detected!"
+            echo "VULN_XSS=1" >> $GITHUB_ENV
+          else
+            echo "✅ No XSS patterns found"
+            echo "VULN_XSS=0" >> $GITHUB_ENV
+          fi
+
+      - name: Scan for hard-coded secrets
+        run: |
+          echo "🔍 Scanning for hard-coded credentials..."
+          if grep -ri "password.*:.*['\"]" src/ 2>/dev/null | grep -v "//"; then
+            echo "❌ Hard-coded credentials detected!"
+            echo "VULN_SECRETS=1" >> $GITHUB_ENV
+          else
+            echo "✅ No hard-coded secrets found"
+            echo "VULN_SECRETS=0" >> $GITHUB_ENV
+          fi
+
+      - name: Scan for environment variable exposure
+        run: |
+          echo "🔍 Scanning for environment variable exposure..."
+          if grep -r "env:.*process\.env[,}]" src/ 2>/dev/null; then
+            echo "❌ Process.env exposure detected!"
+            echo "VULN_ENV=1" >> $GITHUB_ENV
+          else
+            echo "✅ No env exposure found"
+            echo "VULN_ENV=0" >> $GITHUB_ENV
+          fi
+
+      - name: Security Gate Decision
+        run: |
+          TOTAL_VULNS=0
+          
+          if [ "$VULN_SQL" = "1" ]; then
+            TOTAL_VULNS=$((TOTAL_VULNS + 1))
+          fi
+          
+          if [ "$VULN_XSS" = "1" ]; then
+            TOTAL_VULNS=$((TOTAL_VULNS + 1))
+          fi
+          
+          if [ "$VULN_SECRETS" = "1" ]; then
+            TOTAL_VULNS=$((TOTAL_VULNS + 1))
+          fi
+          
+          if [ "$VULN_ENV" = "1" ]; then
+            TOTAL_VULNS=$((TOTAL_VULNS + 1))
+          fi
+          
+          echo ""
+          echo "========================================="
+          echo "🛡️  SECURITY GATE REPORT"
+          echo "========================================="
+          echo "SQL Injection: $([ "$VULN_SQL" = "1" ] && echo "❌ DETECTED" || echo "✅ OK")"
+          echo "XSS: $([ "$VULN_XSS" = "1" ] && echo "❌ DETECTED" || echo "✅ OK")"
+          echo "Hard-coded Secrets: $([ "$VULN_SECRETS" = "1" ] && echo "❌ DETECTED" || echo "✅ OK")"
+          echo "Env Exposure: $([ "$VULN_ENV" = "1" ] && echo "❌ DETECTED" || echo "✅ OK")"
+          echo "========================================="
+          echo "Total Vulnerabilities: $TOTAL_VULNS"
+          echo "========================================="
+          echo ""
+          
+          if [ $TOTAL_VULNS -gt 0 ]; then
+            echo "🚫 SECURITY GATE: BLOCKED"
+            echo "Found $TOTAL_VULNS vulnerability pattern(s)."
+            echo "Please fix the vulnerabilities before merging this PR."
+            exit 1
+          else
+            echo "✅ SECURITY GATE: PASSED"
+            echo "No vulnerabilities detected. Safe to merge!"
+          fi
+
