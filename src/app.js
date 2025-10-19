@@ -25,6 +25,33 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
 
+// ⚠️ VULNÉRABILITÉ 1 : SQL Injection
+app.get('/api/user/:id', (req, res) => {
+  const userId = req.params.id;
+  // Pas de validation - injection SQL possible
+  const query = `SELECT * FROM users WHERE id = ${userId}`;
+  res.json({ query, warning: 'SQL Injection vulnerability!' });
+});
+
+// ⚠️ VULNÉRABILITÉ 2 : XSS (Cross-Site Scripting)
+app.get('/api/search', (req, res) => {
+  const searchTerm = req.query.q;
+  // Pas d'échappement HTML - XSS possible
+  res.send(`<h1>Résultats pour: ${searchTerm}</h1>`);
+});
+
+// ⚠️ VULNÉRABILITÉ 3 : Exposition de données sensibles
+app.get('/api/debug', (req, res) => {
+  res.json({
+    env: process.env,
+    database: {
+      host: 'prod-db.example.com',
+      password: 'super_secret_password_123',
+      apiKey: 'sk-1234567890abcdef'
+    }
+  });
+});
+
 
 const server = app.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
